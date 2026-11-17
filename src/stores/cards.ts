@@ -39,6 +39,7 @@ export function sanitizeCard(raw: unknown): Card | null {
     imageUrl: cleanUrl(raw.imageUrl),
     description: typeof raw.description === 'string' ? raw.description.trim() : '',
     tags: normalizeTags(raw.tags),
+    selected: raw.selected === true,
     createdAt: typeof raw.createdAt === 'number' && Number.isFinite(raw.createdAt) ? raw.createdAt : Date.now()
   }
 }
@@ -58,9 +59,10 @@ export function parseImport(text: string): Card[] {
     .map(card => ({ ...card, id: crypto.randomUUID() }))
 }
 
-export function filterCards(cards: Card[], tag: string | null, query: string): Card[] {
+export function filterCards(cards: Card[], tag: string | null, query: string, selectionOnly = false): Card[] {
   const q = query.trim().toLowerCase()
   return cards.filter(card => {
+    if (selectionOnly && !card.selected) return false
     if (tag && !card.tags.includes(tag)) return false
     if (!q) return true
     return (
@@ -71,23 +73,28 @@ export function filterCards(cards: Card[], tag: string | null, query: string): C
   })
 }
 
+export function frameLabel(position: number): string {
+  return `${String(position).padStart(2, '0')}A`
+}
+
 function defaultCards(): Card[] {
   const now = Date.now()
-  const samples: Array<[string, string, string, string[], number]> = [
-    ['Laos', 'https://images.pexels.com/photos/31495556/pexels-photo-31495556.jpeg?w=600', 'Paysage brumeux sur le Mékong.', ['voyage', 'nature', 'asie'], 3],
-    ['Immeubles urbains', 'https://images.pexels.com/photos/34760024/pexels-photo-34760024.jpeg?w=600', 'Vue aérienne d’un quartier en brique rouge.', ['archi', 'ville', 'urbain'], 2],
-    ['Canard', 'https://images.pexels.com/photos/4488850/pexels-photo-4488850.jpeg?w=600', 'Portrait d’un petit canard nageant dans l’eau.', ['nature', 'animal', 'photo'], 1],
-    ['Arc de Triomphe', 'https://images.pexels.com/photos/37220082/pexels-photo-37220082.jpeg?w=600', 'L’Arc de Triomphe sous ciel bleu.', ['paris', 'archi', 'photo'], 0],
-    ['Panda géant', 'https://images.pexels.com/photos/31097582/pexels-photo-31097582.jpeg?w=600', 'Portrait d’un panda géant mangeant du bambou.', ['animal', 'nature', 'asie'], 4],
-    ['Ours polaire', 'https://images.pexels.com/photos/53425/polar-bear-arctic-wildlife-snow-53425.jpeg?w=600', 'Ours polaire dans la neige arctique.', ['animal', 'nature', 'arctique'], 5],
-    ['Perroquet éclectus', 'https://images.pexels.com/photos/7722506/pexels-photo-7722506.jpeg?w=600', 'Portrait d’un petit perroquet au plumage vert.', ['animal', 'oiseau', 'nature'], 6]
+  const samples: Array<[string, string, string, string[], number, boolean]> = [
+    ['Laos', 'https://images.pexels.com/photos/31495556/pexels-photo-31495556.jpeg?w=600', 'Paysage brumeux sur le Mékong.', ['voyage', 'nature', 'asie'], 3, true],
+    ['Immeubles urbains', 'https://images.pexels.com/photos/34760024/pexels-photo-34760024.jpeg?w=600', 'Vue aérienne d’un quartier en brique rouge.', ['archi', 'ville', 'urbain'], 2, false],
+    ['Canard', 'https://images.pexels.com/photos/4488850/pexels-photo-4488850.jpeg?w=600', 'Portrait d’un petit canard nageant dans l’eau.', ['nature', 'animal', 'photo'], 1, false],
+    ['Arc de Triomphe', 'https://images.pexels.com/photos/37220082/pexels-photo-37220082.jpeg?w=600', 'L’Arc de Triomphe sous ciel bleu.', ['paris', 'archi', 'photo'], 0, false],
+    ['Panda géant', 'https://images.pexels.com/photos/31097582/pexels-photo-31097582.jpeg?w=600', 'Portrait d’un panda géant mangeant du bambou.', ['animal', 'nature', 'asie'], 4, false],
+    ['Ours polaire', 'https://images.pexels.com/photos/53425/polar-bear-arctic-wildlife-snow-53425.jpeg?w=600', 'Ours polaire dans la neige arctique.', ['animal', 'nature', 'arctique'], 5, true],
+    ['Perroquet éclectus', 'https://images.pexels.com/photos/7722506/pexels-photo-7722506.jpeg?w=600', 'Portrait d’un petit perroquet au plumage vert.', ['animal', 'oiseau', 'nature'], 6, false]
   ]
-  return samples.map(([title, imageUrl, description, tags, daysAgo]) => ({
+  return samples.map(([title, imageUrl, description, tags, daysAgo, selected]) => ({
     id: crypto.randomUUID(),
     title,
     imageUrl,
     description,
     tags,
+    selected,
     createdAt: now - daysAgo * DAY
   }))
 }
@@ -110,13 +117,23 @@ export const useCardsStore = defineStore('cards', () => {
   const cards = ref<Card[]>(loadCards())
   const searchQuery = ref('')
   const activeTag = ref<string | null>(null)
+  const selectionOnly = ref(false)
   const saveError = ref(false)
 
-  const filteredCards = computed(() => filterCards(cards.value, activeTag.value, searchQuery.value))
+  const filteredCards = computed(() =>
+    filterCards(cards.value, activeTag.value, searchQuery.value, selectionOnly.value)
+  )
 
   const allTags = computed(() =>
     [...new Set(cards.value.flatMap(card => card.tags))].sort((a, b) => a.localeCompare(b, 'fr'))
   )
+
+  const selectedCount = computed(() => cards.value.filter(card => card.selected).length)
+
+  const frameLabels = computed(() => {
+    const ordered = [...cards.value].sort((a, b) => a.createdAt - b.createdAt)
+    return new Map(ordered.map((card, index) => [card.id, frameLabel(index + 1)]))
+  })
 
   function addCard(input: NewCard): Card {
     const card: Card = {
@@ -125,6 +142,7 @@ export const useCardsStore = defineStore('cards', () => {
       imageUrl: cleanUrl(input.imageUrl),
       description: input.description.trim(),
       tags: normalizeTags(input.tags),
+      selected: false,
       createdAt: Date.now()
     }
     cards.value.unshift(card)
@@ -140,8 +158,14 @@ export const useCardsStore = defineStore('cards', () => {
       title: updates.title?.trim() || current.title,
       imageUrl: updates.imageUrl !== undefined ? cleanUrl(updates.imageUrl) : current.imageUrl,
       description: updates.description !== undefined ? updates.description.trim() : current.description,
-      tags: updates.tags !== undefined ? normalizeTags(updates.tags) : current.tags
+      tags: updates.tags !== undefined ? normalizeTags(updates.tags) : current.tags,
+      selected: updates.selected ?? current.selected
     }
+  }
+
+  function toggleSelected(id: string): void {
+    const card = cards.value.find(item => item.id === id)
+    if (card) card.selected = !card.selected
   }
 
   function deleteCard(id: string): Card | null {
@@ -153,6 +177,10 @@ export const useCardsStore = defineStore('cards', () => {
 
   function setTag(tag: string | null): void {
     activeTag.value = activeTag.value === tag ? null : tag
+  }
+
+  function toggleSelectionOnly(): void {
+    selectionOnly.value = !selectionOnly.value
   }
 
   function buildExport(): FolioExport {
@@ -174,6 +202,10 @@ export const useCardsStore = defineStore('cards', () => {
     if (activeTag.value && !tags.includes(activeTag.value)) activeTag.value = null
   })
 
+  watch(selectedCount, count => {
+    if (count === 0) selectionOnly.value = false
+  })
+
   watch(
     cards,
     value => {
@@ -191,13 +223,18 @@ export const useCardsStore = defineStore('cards', () => {
     cards,
     searchQuery,
     activeTag,
+    selectionOnly,
     saveError,
     filteredCards,
     allTags,
+    selectedCount,
+    frameLabels,
     addCard,
     updateCard,
+    toggleSelected,
     deleteCard,
     setTag,
+    toggleSelectionOnly,
     buildExport,
     importCards
   }

@@ -2,17 +2,18 @@
   <header class="header">
     <div class="header__inner">
       <RouterLink :to="{ name: 'home' }" class="header__brand" aria-label="Folio, accueil">
-        <span class="header__logo" aria-hidden="true">FLO</span>
-        <span class="header__name">Folio</span>
+        <span class="header__lamp" aria-hidden="true" />
+        <span class="header__name">FOLIO</span>
+        <span class="header__sheet" aria-hidden="true">planche n°01</span>
       </RouterLink>
 
       <div class="header__search" role="search">
-        <label :for="searchId" class="header__sr-only">Rechercher une carte</label>
+        <label :for="searchId" class="header__sr-only">Rechercher une vue</label>
         <input
           :id="searchId"
           v-model="searchQuery"
           type="search"
-          placeholder="Rechercher..."
+          placeholder="Rechercher une vue…"
           class="header__search-input"
           autocomplete="off"
           @input="goHome"
@@ -61,10 +62,11 @@ const fileInput = ref<HTMLInputElement | null>(null)
 const toast = reactive({ visible: false, message: '', type: 'success' as ToastType })
 let toastTimer: ReturnType<typeof setTimeout> | undefined
 
-const countLabel = computed(() => {
-  const count = filteredCards.value.length
-  return `${count} carte${count > 1 ? 's' : ''}`
-})
+function plural(count: number, word: string): string {
+  return `${count} ${word}${count > 1 ? 's' : ''}`
+}
+
+const countLabel = computed(() => plural(filteredCards.value.length, 'vue'))
 
 watch(saveError, failed => {
   if (failed) showToast('Enregistrement impossible : le stockage du navigateur est plein.', 'error')
@@ -83,7 +85,7 @@ function exportCards(): void {
   link.download = `folio-export-${data.exportedAt.slice(0, 10)}.json`
   link.click()
   URL.revokeObjectURL(url)
-  showToast(`${data.cards.length} carte${data.cards.length > 1 ? 's' : ''} exportée${data.cards.length > 1 ? 's' : ''}.`)
+  showToast(`${plural(data.cards.length, 'vue')} exportée${data.cards.length > 1 ? 's' : ''}.`)
 }
 
 function triggerImport(): void {
@@ -98,10 +100,10 @@ async function handleImport(event: Event): Promise<void> {
   try {
     const count = store.importCards(await file.text())
     if (count === 0) {
-      showToast('Aucune carte valide dans ce fichier.', 'error')
+      showToast('Aucune vue valide dans ce fichier.', 'error')
       return
     }
-    showToast(`${count} carte${count > 1 ? 's' : ''} importée${count > 1 ? 's' : ''}.`)
+    showToast(`${plural(count, 'vue')} importée${count > 1 ? 's' : ''}.`)
   } catch (error) {
     showToast(error instanceof Error ? error.message : 'Import impossible.', 'error')
   }
@@ -127,7 +129,8 @@ onBeforeUnmount(() => clearTimeout(toastTimer))
   position: sticky;
   top: 0;
   z-index: 50;
-  background: $surface;
+  background: rgba(12, 11, 11, 0.78);
+  backdrop-filter: blur(12px);
   border-bottom: 1px solid $border;
 }
 
@@ -135,7 +138,7 @@ onBeforeUnmount(() => clearTimeout(toastTimer))
   max-width: 1400px;
   margin: 0 auto;
   padding: 0 24px;
-  height: 56px;
+  height: 60px;
   display: flex;
   align-items: center;
   gap: 20px;
@@ -154,21 +157,35 @@ onBeforeUnmount(() => clearTimeout(toastTimer))
   text-decoration: none;
 }
 
-.header__logo {
-  font-family: $font-mono;
-  font-size: 12px;
-  color: $text-secondary;
-  border: 1px solid $border-hover;
-  padding: 3px 7px;
-  letter-spacing: 0.05em;
+.header__lamp {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: $accent;
+  box-shadow: 0 0 6px $accent, 0 0 18px $accent-glow;
+  animation: lamp 4s ease-in-out infinite;
+}
+
+@keyframes lamp {
+  50% {
+    box-shadow: 0 0 4px $accent, 0 0 10px $accent-glow;
+  }
 }
 
 .header__name {
-  font-size: 14px;
-  font-weight: 500;
+  font-family: $font-mono;
+  font-size: 15px;
+  letter-spacing: 0.28em;
   color: $text-primary;
+}
 
-  @media (max-width: 480px) {
+.header__sheet {
+  font-family: $font-mono;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: $edge;
+
+  @media (max-width: 720px) {
     display: none;
   }
 }
@@ -183,9 +200,10 @@ onBeforeUnmount(() => clearTimeout(toastTimer))
 
 .header__search-input {
   width: 100%;
-  background: $bg;
+  background: $surface;
   border: 1px solid $border;
-  padding: 8px 12px;
+  border-radius: 999px;
+  padding: 8px 34px 8px 16px;
   font-size: 13px;
   color: $text-primary;
   transition: border-color $duration $ease;
@@ -205,7 +223,7 @@ onBeforeUnmount(() => clearTimeout(toastTimer))
 
 .header__search-clear {
   position: absolute;
-  right: 10px;
+  right: 14px;
   font-size: 18px;
   color: $text-muted;
   line-height: 1;
@@ -244,6 +262,7 @@ onBeforeUnmount(() => clearTimeout(toastTimer))
   justify-content: center;
   color: $text-secondary;
   border: 1px solid $border;
+  border-radius: 50%;
   background: transparent;
   text-decoration: none;
   transition: color $duration $ease, border-color $duration $ease, background $duration $ease;
@@ -252,13 +271,12 @@ onBeforeUnmount(() => clearTimeout(toastTimer))
   &:focus-visible {
     color: $text-primary;
     border-color: $border-hover;
-    background: $bg;
+    background: $surface;
   }
 
   &.router-link-active {
     color: $text-primary;
-    border-color: $border-hover;
-    background: $bg;
+    border-color: $accent;
   }
 }
 
@@ -295,26 +313,35 @@ onBeforeUnmount(() => clearTimeout(toastTimer))
   font-family: $font-mono;
   padding: 8px 14px;
   border: 1px solid $border-hover;
+  border-radius: $radius;
   background: $surface;
   color: $text-primary;
 
   &--error {
-    border-color: #c0392b;
-    color: #c0392b;
+    border-color: $danger;
+    color: $danger;
   }
 }
 
-.toast-enter-active, .toast-leave-active {
+.toast-enter-active,
+.toast-leave-active {
   transition: opacity $duration $ease, transform $duration $ease;
 }
-.toast-enter-from, .toast-leave-to {
+
+.toast-enter-from,
+.toast-leave-to {
   opacity: 0;
   transform: translateY(-4px);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .toast-enter-active, .toast-leave-active {
+  .toast-enter-active,
+  .toast-leave-active {
     transition: none;
+  }
+
+  .header__lamp {
+    animation: none;
   }
 }
 </style>

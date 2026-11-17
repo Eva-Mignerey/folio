@@ -4,12 +4,13 @@ export interface Card {
   imageUrl: string
   description: string
   tags: string[]
+  selected: boolean
   createdAt: number
 }
 
-export type NewCard = Omit<Card, 'id' | 'createdAt'>
+export type NewCard = Omit<Card, 'id' | 'createdAt' | 'selected'>
 
-export type CardUpdate = Partial<NewCard>
+export type CardUpdate = Partial<Omit<Card, 'id' | 'createdAt'>>
 
 export interface FolioExport {
   version: string

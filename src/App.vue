@@ -9,8 +9,8 @@
       v-if="isHome"
       type="button"
       class="app__fab"
-      aria-label="Ajouter une carte"
-      title="Ajouter une carte"
+      aria-label="Ajouter une vue"
+      title="Ajouter une vue"
       aria-haspopup="dialog"
       @click="showModal = true"
     >
@@ -57,29 +57,39 @@ const isHome = computed(() => route.name === 'home')
   position: fixed;
   bottom: 28px;
   right: 28px;
-  width: 48px;
-  height: 48px;
-  border-radius: 20%;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
   background: $accent;
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 100;
-  transition: opacity $duration $ease;
+  box-shadow: 0 0 0 6px rgba(210, 52, 88, 0.12), 0 10px 30px -6px $accent-glow;
+  transition: transform $duration $ease, box-shadow $duration $ease;
 
   &:hover {
-    opacity: 0.8;
+    transform: rotate(90deg);
+    box-shadow: 0 0 0 10px rgba(210, 52, 88, 0.16), 0 10px 40px -4px $accent-glow;
   }
 
   &:focus-visible {
     outline: 2px solid $text-primary;
-    outline-offset: 3px;
+    outline-offset: 4px;
   }
 
   @media (max-width: 600px) {
     bottom: 20px;
     right: 16px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+
+    &:hover {
+      transform: none;
+    }
   }
 }
 </style>

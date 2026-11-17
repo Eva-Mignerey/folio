@@ -1,11 +1,20 @@
 <template>
   <section class="home" aria-labelledby="home-title">
-    <h1 id="home-title" class="home__title">Mes cartes</h1>
-    <FilterBar :tags="allTags" :active="activeTag" @select="store.setTag" />
+    <h1 id="home-title" class="home__title">Planche contact</h1>
+    <FilterBar
+      :tags="allTags"
+      :active="activeTag"
+      :selection-only="selectionOnly"
+      :selected-count="selectedCount"
+      @select="store.setTag"
+      @toggle-selection="store.toggleSelectionOnly"
+    />
     <CardGrid
       :cards="filteredCards"
+      :frame-labels="frameLabels"
       :has-filters="hasFilters"
       @select-tag="store.setTag"
+      @toggle-select="store.toggleSelected"
       @update="store.updateCard"
       @delete="store.deleteCard"
       @reset="resetFilters"
@@ -21,12 +30,13 @@ import FilterBar from '../components/FilterBar.vue'
 import CardGrid from '../components/CardGrid.vue'
 
 const store = useCardsStore()
-const { allTags, activeTag, filteredCards, searchQuery } = storeToRefs(store)
+const { allTags, activeTag, filteredCards, searchQuery, selectionOnly, selectedCount, frameLabels } = storeToRefs(store)
 
-const hasFilters = computed(() => activeTag.value !== null || searchQuery.value.trim() !== '')
+const hasFilters = computed(() => activeTag.value !== null || selectionOnly.value || searchQuery.value.trim() !== '')
 
 function resetFilters(): void {
   activeTag.value = null
+  selectionOnly.value = false
   searchQuery.value = ''
 }
 </script>

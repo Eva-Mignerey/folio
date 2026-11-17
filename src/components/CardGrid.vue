@@ -5,7 +5,9 @@
         v-for="card in cards"
         :key="card.id"
         :card="card"
+        :frame="frameLabels.get(card.id) ?? '00A'"
         @select-tag="tag => emit('select-tag', tag)"
+        @toggle-select="id => emit('toggle-select', id)"
         @update="(id, updates) => emit('update', id, updates)"
         @delete="id => emit('delete', id)"
       />
@@ -21,11 +23,13 @@ import EmptyState from './EmptyState.vue'
 
 defineProps<{
   cards: Card[]
+  frameLabels: Map<string, string>
   hasFilters: boolean
 }>()
 
 const emit = defineEmits<{
   'select-tag': [tag: string]
+  'toggle-select': [id: string]
   update: [id: string, updates: CardUpdate]
   delete: [id: string]
   reset: []
@@ -36,13 +40,13 @@ const emit = defineEmits<{
 @use '../styles/variables' as *;
 
 .grid-wrapper {
-  padding-top: 16px;
+  padding-top: 28px;
 }
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 32px 22px;
 }
 
 .card-enter-active,

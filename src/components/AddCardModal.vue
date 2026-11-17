@@ -2,7 +2,10 @@
   <dialog ref="dialogRef" class="modal" :aria-labelledby="ids.title" @close="emit('close')" @click="closeOnBackdrop">
     <form class="modal__inner" @submit.prevent="submit">
       <div class="modal__header">
-        <h2 :id="ids.title" class="modal__title">Nouvelle carte</h2>
+        <div class="modal__heading">
+          <span class="modal__lamp" aria-hidden="true" />
+          <h2 :id="ids.title" class="modal__title">Nouvelle vue</h2>
+        </div>
         <button type="button" class="modal__close" aria-label="Fermer" @click="close">×</button>
       </div>
 
@@ -101,16 +104,30 @@ function submit(): void {
 .modal {
   margin: auto;
   padding: 0;
-  background: $bg;
+  background: $surface;
   border: 1px solid $border-hover;
+  border-radius: 8px;
   color: $text-primary;
   width: calc(100% - 32px);
   max-width: 460px;
   max-height: 90vh;
   overflow-y: auto;
+  box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.8), 0 0 60px -30px $accent-glow;
 
   &::backdrop {
-    background: rgba(42, 42, 38, 0.4);
+    background: rgba(5, 4, 4, 0.7);
+    backdrop-filter: blur(3px);
+  }
+
+  &[open] {
+    animation: modal-in 220ms $ease;
+  }
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
   }
 }
 
@@ -121,9 +138,26 @@ function submit(): void {
   padding: 18px 20px 0;
 }
 
+.modal__heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.modal__lamp {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: $accent;
+  box-shadow: 0 0 8px $accent;
+}
+
 .modal__title {
-  font-size: 15px;
-  font-weight: 500;
+  font-family: $font-mono;
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   color: $text-primary;
 }
 
@@ -133,16 +167,18 @@ function submit(): void {
   line-height: 1;
   width: 32px;
   height: 32px;
-  transition: color $duration $ease;
+  border-radius: 50%;
+  transition: color $duration $ease, background $duration $ease;
 
   &:hover,
   &:focus-visible {
     color: $text-primary;
+    background: $surface-2;
   }
 }
 
 .modal__body {
-  padding: 16px 20px;
+  padding: 18px 20px;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -151,12 +187,13 @@ function submit(): void {
 .modal__field {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
 }
 
 .modal__label {
-  font-size: 12px;
+  font-size: 11px;
   font-family: $font-mono;
+  letter-spacing: 0.06em;
   color: $text-secondary;
 }
 
@@ -165,9 +202,10 @@ function submit(): void {
 }
 
 .modal__input {
-  background: $surface;
+  background: $bg;
   border: 1px solid $border;
-  padding: 9px 11px;
+  border-radius: $radius;
+  padding: 10px 12px;
   font-size: 13px;
   color: $text-primary;
   width: 100%;
@@ -188,34 +226,36 @@ function submit(): void {
 }
 
 .modal__preview {
-  margin-top: 6px;
-  border: 1px solid $border;
-  overflow: hidden;
+  margin-top: 4px;
+  padding: 10px 6px;
+  border-radius: $radius;
+  background: $film;
 
   img {
     width: 100%;
-    height: 160px;
+    aspect-ratio: 3 / 2;
     object-fit: cover;
   }
 }
 
 .modal__error {
   font-size: 12px;
-  color: #c0392b;
+  color: $danger;
 }
 
 .modal__footer {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  padding: 0 20px 18px;
+  padding: 0 20px 20px;
 }
 
 .modal__btn {
-  font-size: 13px;
+  font-size: 12px;
   font-family: $font-mono;
-  padding: 8px 16px;
+  padding: 9px 18px;
   border: 1px solid $border;
+  border-radius: 999px;
   transition: background $duration $ease, color $duration $ease, border-color $duration $ease, opacity $duration $ease;
 
   &--cancel {
@@ -230,19 +270,25 @@ function submit(): void {
   }
 
   &--submit {
-    background: $text-primary;
-    border-color: $text-primary;
-    color: $bg;
+    background: $accent;
+    border-color: $accent;
+    color: #fff;
 
     &:hover,
     &:focus-visible {
-      opacity: 0.85;
+      opacity: 0.88;
     }
 
     &:disabled {
       opacity: 0.35;
       cursor: not-allowed;
     }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal[open] {
+    animation: none;
   }
 }
 </style>

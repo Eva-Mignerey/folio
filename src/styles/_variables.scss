@@ -1,17 +1,20 @@
-$bg: #0e0e0e;
-$surface: #161616;
-$surface-2: #1f1f1f;
-$border: rgba(255, 255, 255, 0.08);
-$border-hover: rgba(255, 255, 255, 0.22);
+$bg: #0c0b0b;
+$surface: #151313;
+$surface-2: #1d1a1a;
+$film: #050404;
+$border: rgba(255, 240, 230, 0.08);
+$border-hover: rgba(255, 240, 230, 0.22);
 $accent: #d23458;
+$accent-glow: rgba(210, 52, 88, 0.35);
+$edge: #e2a14a;
 $danger: #ff6b6b;
-$text-primary: #ededed;
-$text-secondary: #b5b5b5;
-$text-muted: #8a8a8a;
+$text-primary: #efe9e4;
+$text-secondary: #b8b0aa;
+$text-muted: #8c847e;
 
 $font-body: 'Inter', sans-serif;
 $font-mono: 'Fragment Mono', monospace;
 
-$radius: 10px;
+$radius: 3px;
 $duration: 180ms;
 $ease: cubic-bezier(0.22, 1, 0.36, 1);
