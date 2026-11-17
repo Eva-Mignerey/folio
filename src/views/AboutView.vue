@@ -1,53 +1,53 @@
 <template>
   <article class="about">
     <div class="about__inner">
+      <header class="about__hero">
+        <p class="about__label"><span class="about__lamp" aria-hidden="true" />Fiche technique</p>
+        <h1 class="about__title">FOLIO 400</h1>
+        <p class="about__intro">
+          Une planche contact pour ses références visuelles. On y développe des images, on les numérote, on entoure celles
+          qui comptent. Pour penser, pas pour partager.
+        </p>
+      </header>
 
-      <div class="about__hero">
-        <span class="about__label">À propos</span>
-        <h1 class="about__title">Un espace pour penser,<br>pas pour partager.</h1>
-        <p class="about__intro">Un outil de curation visuelle pour usage personnel. Centraliser ses références et inspirations dans une interface claire, sans compte, sans algorithme.</p>
-      </div>
-
-      <div class="about__section">
-        <h2 class="about__section-title">Pourquoi cet outil ?</h2>
-        <p class="about__text">J'ai regardé ce qui existait avant de commencer. Aucun outil ne correspondait vraiment à ce que je cherchais : quelque chose de simple, rapide, et complètement privé.</p>
+      <section class="about__section" aria-labelledby="about-why">
+        <h2 id="about-why" class="about__section-title"><span>01</span>Pourquoi</h2>
+        <p class="about__text">
+          J’ai regardé ce qui existait avant de commencer. Aucun outil ne correspondait à ce que je cherchais : quelque
+          chose de simple, rapide, sans compte et sans algorithme.
+        </p>
         <ul class="about__compare">
           <li v-for="tool in tools" :key="tool.name" class="about__compare-item">
-            <div class="about__compare-header">
-              <span class="about__compare-name">{{ tool.name }}</span>
-              <span class="about__compare-tag">{{ tool.label }}</span>
-            </div>
+            <span class="about__compare-name">{{ tool.name }}</span>
+            <span class="about__compare-tag">{{ tool.label }}</span>
             <p class="about__compare-desc">{{ tool.desc }}</p>
           </li>
           <li class="about__compare-item about__compare-item--ours">
-            <div class="about__compare-header">
-              <span class="about__compare-name">Folio</span>
-              <span class="about__compare-tag about__compare-tag--ours">mon approche</span>
-            </div>
-            <p class="about__compare-desc">Minimaliste, local, sans friction. Pensé pour réfléchir, pas pour diffuser.</p>
+            <span class="about__compare-name">Folio</span>
+            <span class="about__compare-tag about__compare-tag--ours">mon approche</span>
+            <p class="about__compare-desc">Minimaliste, local, sans friction. Une planche à soi, rien d’autre.</p>
           </li>
         </ul>
-      </div>
+      </section>
 
-      <div class="about__section">
-        <h2 class="about__section-title">Fonctionnalités</h2>
-        <ul class="about__features">
-          <li v-for="feature in features" :key="feature.title" class="about__feature">
-            <h3 class="about__feature-title">{{ feature.title }}</h3>
-            <p class="about__feature-desc">{{ feature.desc }}</p>
-          </li>
-        </ul>
-      </div>
+      <section class="about__section" aria-labelledby="about-specs">
+        <h2 id="about-specs" class="about__section-title"><span>02</span>Caractéristiques</h2>
+        <dl class="about__specs">
+          <div v-for="spec in specs" :key="spec.label" class="about__spec">
+            <dt class="about__spec-label">{{ spec.label }}</dt>
+            <dd class="about__spec-value">{{ spec.value }}</dd>
+          </div>
+        </dl>
+      </section>
 
-      <div class="about__section">
-        <h2 class="about__section-title">Stack</h2>
+      <section class="about__section" aria-labelledby="about-stack">
+        <h2 id="about-stack" class="about__section-title"><span>03</span>Composition</h2>
         <ul class="about__stack">
           <li v-for="tech in stack" :key="tech" class="about__stack-item">{{ tech }}</li>
         </ul>
-      </div>
+      </section>
 
-      <RouterLink :to="{ name: 'home' }" class="about__back">← retour</RouterLink>
-
+      <RouterLink :to="{ name: 'home' }" class="about__back">← retour à la planche</RouterLink>
     </div>
   </article>
 </template>
@@ -59,22 +59,24 @@ interface Tool {
   desc: string
 }
 
-interface Feature {
-  title: string
-  desc: string
+interface Spec {
+  label: string
+  value: string
 }
 
 const tools: Tool[] = [
   { name: 'Pinterest', label: 'social', desc: 'Trop orienté partage et algorithme. Pas adapté à un usage privé.' },
   { name: 'Notion', label: 'complexe', desc: 'Trop générique. Surdimensionné pour juste organiser des visuels.' },
-  { name: 'Are.na', label: 'communautaire', desc: "Proche de l'idée mais l'aspect réseau social reste présent." }
+  { name: 'Are.na', label: 'communautaire', desc: 'Proche de l’idée, mais l’aspect réseau social reste présent.' }
 ]
 
-const features: Feature[] = [
-  { title: 'Ajout rapide', desc: 'Titre, image, description, tags en quelques secondes.' },
-  { title: 'Filtres & recherche', desc: 'Tags personnalisés et recherche textuelle instantanée.' },
-  { title: '100% local', desc: 'Aucun compte. Tout reste dans le navigateur.' },
-  { title: 'Export / Import JSON', desc: "Les données peuvent sortir et entrer pour s'interfacer avec d'autres outils." }
+const specs: Spec[] = [
+  { label: 'Format', value: 'Vues 3:2 numérotées dans l’ordre de développement' },
+  { label: 'Sélection', value: 'Entourer une vue au crayon gras, filtrer sur la sélection' },
+  { label: 'Tri', value: 'Tags personnalisés et recherche instantanée' },
+  { label: 'Stockage', value: 'Dans le navigateur, sans compte ni serveur' },
+  { label: 'Archivage', value: 'Export et import JSON pour sauvegarder ou transférer' },
+  { label: 'Accès', value: 'Navigation clavier, lecteurs d’écran, animations réduites' }
 ]
 
 const stack: string[] = ['Vue.js 3', 'TypeScript', 'Pinia', 'Vue Router', 'Vite', 'SCSS', 'localStorage']
@@ -84,19 +86,19 @@ const stack: string[] = ['Vue.js 3', 'TypeScript', 'Pinia', 'Vue Router', 'Vite'
 @use '../styles/variables' as *;
 
 .about {
-  padding: 48px 24px 80px;
+  padding: 56px 0 80px;
 
   @media (max-width: 600px) {
-    padding: 32px 16px 60px;
+    padding: 36px 0 60px;
   }
 }
 
 .about__inner {
-  max-width: 680px;
+  max-width: 720px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 52px;
+  gap: 56px;
 }
 
 .about__hero {
@@ -106,72 +108,94 @@ const stack: string[] = ['Vue.js 3', 'TypeScript', 'Pinia', 'Vue Router', 'Vite'
 }
 
 .about__label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-family: $font-mono;
   font-size: 11px;
-  color: $text-muted;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  color: $edge;
+}
+
+.about__lamp {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: $accent;
+  box-shadow: 0 0 8px $accent;
 }
 
 .about__title {
-  font-size: clamp(26px, 4vw, 38px);
-  font-weight: 500;
+  font-family: $font-mono;
+  font-size: clamp(40px, 9vw, 84px);
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  line-height: 1;
   color: $text-primary;
-  line-height: 1.2;
 }
 
 .about__intro {
-  font-size: 15px;
-  color: $text-secondary;
+  max-width: 560px;
+  font-size: 16px;
   line-height: 1.65;
+  color: $text-secondary;
 }
 
 .about__section {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
 }
 
 .about__section-title {
-  font-size: 11px;
-  font-family: $font-mono;
-  color: $text-muted;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
   padding-bottom: 12px;
   border-bottom: 1px solid $border;
+  font-family: $font-mono;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: $text-primary;
+
+  span {
+    color: $edge;
+  }
 }
 
 .about__text {
   font-size: 14px;
+  line-height: 1.7;
   color: $text-secondary;
-  line-height: 1.65;
 }
 
 .about__compare {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  border: 1px solid $border;
-}
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
 
-.about__compare-item {
-  padding: 14px 16px;
-  background: $surface;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-
-  &--ours {
-    background: $bg;
-    border-top: 1px solid $border;
+  @media (min-width: 600px) {
+    grid-template-columns: 1fr 1fr;
   }
 }
 
-.about__compare-header {
-  display: flex;
+.about__compare-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
   align-items: center;
-  gap: 10px;
+  gap: 6px 10px;
+  padding: 14px 16px;
+  border: 1px solid $border;
+  border-radius: $radius;
+  background: $surface;
+
+  &--ours {
+    border-color: rgba(210, 52, 88, 0.5);
+    background: rgba(210, 52, 88, 0.08);
+  }
 }
 
 .about__compare-name {
@@ -181,10 +205,12 @@ const stack: string[] = ['Vue.js 3', 'TypeScript', 'Pinia', 'Vue Router', 'Vite'
 }
 
 .about__compare-tag {
-  font-size: 10px;
+  justify-self: start;
   font-family: $font-mono;
-  padding: 2px 7px;
+  font-size: 10px;
+  padding: 2px 8px;
   border: 1px solid $border;
+  border-radius: 999px;
   color: $text-muted;
 
   &--ours {
@@ -194,40 +220,41 @@ const stack: string[] = ['Vue.js 3', 'TypeScript', 'Pinia', 'Vue Router', 'Vite'
 }
 
 .about__compare-desc {
+  grid-column: 1 / -1;
   font-size: 13px;
-  color: $text-secondary;
   line-height: 1.5;
+  color: $text-secondary;
 }
 
-.about__features {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1px;
-  border: 1px solid $border;
+.about__specs {
+  display: flex;
+  flex-direction: column;
+}
 
-  @media (max-width: 480px) {
-    grid-template-columns: 1fr;
+.about__spec {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4px;
+  padding: 14px 0;
+  border-bottom: 1px dashed $border;
+
+  @media (min-width: 600px) {
+    grid-template-columns: 160px 1fr;
+    gap: 24px;
   }
 }
 
-.about__feature {
-  padding: 14px 16px;
-  background: $surface;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
+.about__spec-label {
+  font-family: $font-mono;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: $text-muted;
 }
 
-.about__feature-title {
-  font-size: 13px;
-  font-weight: 500;
+.about__spec-value {
+  font-size: 14px;
   color: $text-primary;
-}
-
-.about__feature-desc {
-  font-size: 12px;
-  color: $text-secondary;
-  line-height: 1.5;
 }
 
 .about__stack {
@@ -238,23 +265,24 @@ const stack: string[] = ['Vue.js 3', 'TypeScript', 'Pinia', 'Vue Router', 'Vite'
 
 .about__stack-item {
   font-family: $font-mono;
-  font-size: 11px;
-  padding: 4px 10px;
+  font-size: 12px;
+  padding: 6px 12px;
   border: 1px solid $border;
+  border-radius: 999px;
   color: $text-secondary;
-  background: $surface;
 }
 
 .about__back {
-  font-size: 13px;
+  align-self: flex-start;
   font-family: $font-mono;
+  font-size: 13px;
   color: $text-secondary;
   text-decoration: none;
   transition: color $duration $ease;
 
   &:hover,
   &:focus-visible {
-    color: $text-primary;
+    color: $accent;
   }
 }
 </style>
