@@ -4,16 +4,16 @@
       <div class="frame__sprockets" aria-hidden="true" />
       <div class="frame__window">
         <img
-          v-if="card.imageUrl && !imageError"
-          :src="card.imageUrl"
+          v-if="imageSrc && !imageError"
+          :src="imageSrc"
           :alt="card.description || card.title"
           class="frame__image"
           loading="lazy"
           decoding="async"
           @error="imageError = true"
         />
-        <div v-else class="frame__blank" role="img" :aria-label="card.imageUrl ? 'Image indisponible' : 'Pas d’image'">
-          <span>{{ card.imageUrl ? 'vue voilée' : 'non développée' }}</span>
+        <div v-else class="frame__blank" role="img" :aria-label="blankLabel">
+          <span v-if="!loading">{{ hasImage ? 'vue voilée' : 'non développée' }}</span>
         </div>
         <svg v-if="card.selected" class="frame__mark" viewBox="0 0 210 140" preserveAspectRatio="none" aria-hidden="true">
           <path pathLength="1" d="M36 22 C90 4 170 6 194 36 C214 64 198 114 128 128 C64 140 12 120 9 76 C6 44 32 18 78 12" />
@@ -57,7 +57,11 @@
 
     <form v-else class="frame__form" @submit.prevent="saveEdit" @keydown.esc="cancelEdit">
       <input ref="titleInput" v-model="draft.title" class="frame__input" aria-label="Titre" placeholder="Titre" required @keydown.enter.prevent="saveEdit" />
-      <input v-model="draft.imageUrl" type="url" class="frame__input" aria-label="URL de l’image" placeholder="URL de l’image" @keydown.enter.prevent="saveEdit" />
+      <div v-if="card.imageId && !draft.removeImage" class="frame__imported">
+        <span>Image importée</span>
+        <button type="button" class="frame__imported-remove" @click="draft.removeImage = true">Retirer l’image</button>
+      </div>
+      <input v-else v-model="draft.imageUrl" type="url" class="frame__input" aria-label="URL de l’image" placeholder="URL de l’image" @keydown.enter.prevent="saveEdit" />
       <textarea v-model="draft.description" class="frame__input frame__input--area" aria-label="Description" placeholder="Description" rows="3" />
       <input v-model="draft.tagsRaw" class="frame__input" aria-label="Tags, séparés par des virgules" placeholder="Tags (séparés par des virgules)" @keydown.enter.prevent="saveEdit" />
       <div class="frame__form-actions">
@@ -69,9 +73,10 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, reactive, ref, watch } from 'vue'
+import { computed, nextTick, reactive, ref, watch } from 'vue'
 import type { Card, CardUpdate } from '../types'
 import { parseTagInput } from '../stores/cards'
+import { getImageUrl } from '../lib/imageStore'
 
 const props = defineProps<{
   card: Card
@@ -87,14 +92,34 @@ const emit = defineEmits<{
 
 const editing = ref(false)
 const imageError = ref(false)
+const imageSrc = ref('')
+const loading = ref(false)
 const titleInput = ref<HTMLInputElement | null>(null)
-const draft = reactive({ title: '', imageUrl: '', description: '', tagsRaw: '' })
+const draft = reactive({ title: '', imageUrl: '', description: '', tagsRaw: '', removeImage: false })
+
+const hasImage = computed(() => Boolean(props.card.imageId || props.card.imageUrl))
+const blankLabel = computed(() => {
+  if (loading.value) return 'Chargement de l’image'
+  return hasImage.value ? 'Image indisponible' : 'Pas d’image'
+})
 
 watch(
-  () => props.card.imageUrl,
-  () => {
+  () => [props.card.imageId, props.card.imageUrl] as const,
+  async ([imageId, imageUrl]) => {
     imageError.value = false
-  }
+    if (!imageId) {
+      loading.value = false
+      imageSrc.value = imageUrl
+      return
+    }
+    loading.value = true
+    const url = await getImageUrl(imageId)
+    if (props.card.imageId !== imageId) return
+    loading.value = false
+    imageSrc.value = url ?? ''
+    imageError.value = url === null
+  },
+  { immediate: true }
 )
 
 async function startEdit(): Promise<void> {
@@ -102,6 +127,7 @@ async function startEdit(): Promise<void> {
   draft.imageUrl = props.card.imageUrl
   draft.description = props.card.description
   draft.tagsRaw = props.card.tags.join(', ')
+  draft.removeImage = false
   editing.value = true
   await nextTick()
   titleInput.value?.focus()
@@ -117,7 +143,8 @@ function saveEdit(): void {
     title: draft.title,
     imageUrl: draft.imageUrl,
     description: draft.description,
-    tags: parseTagInput(draft.tagsRaw)
+    tags: parseTagInput(draft.tagsRaw),
+    ...(draft.removeImage ? { imageId: '' } : {})
   })
   editing.value = false
 }
@@ -342,6 +369,32 @@ function saveEdit(): void {
   &--area {
     resize: vertical;
     font-family: $font-body;
+  }
+}
+
+.frame__imported {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px dashed $border;
+  border-radius: $radius;
+  font-family: $font-mono;
+  font-size: 11px;
+  color: $text-muted;
+}
+
+.frame__imported-remove {
+  font-family: $font-mono;
+  font-size: 11px;
+  color: $text-secondary;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+
+  &:hover,
+  &:focus-visible {
+    color: $danger;
   }
 }
 

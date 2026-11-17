@@ -23,10 +23,10 @@
 
       <div class="header__actions">
         <span class="header__count" aria-live="polite">{{ countLabel }}</span>
-        <button type="button" class="header__btn" aria-label="Exporter en JSON" title="Exporter en JSON" @click="exportCards">
+        <button type="button" class="header__btn" aria-label="Exporter en JSON" title="Exporter en JSON" :disabled="busy" @click="exportCards">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
         </button>
-        <button type="button" class="header__btn" aria-label="Importer un JSON" title="Importer un JSON" @click="triggerImport">
+        <button type="button" class="header__btn" aria-label="Importer un JSON" title="Importer un JSON" :disabled="busy" @click="triggerImport">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
         </button>
         <input ref="fileInput" type="file" accept=".json,application/json" class="header__file-input" tabindex="-1" aria-hidden="true" @change="handleImport" />
@@ -59,6 +59,7 @@ const router = useRouter()
 
 const searchId = useId()
 const fileInput = ref<HTMLInputElement | null>(null)
+const busy = ref(false)
 const toast = reactive({ visible: false, message: '', type: 'success' as ToastType })
 let toastTimer: ReturnType<typeof setTimeout> | undefined
 
@@ -76,20 +77,28 @@ function goHome(): void {
   if (route.name !== 'home') router.push({ name: 'home' })
 }
 
-function exportCards(): void {
-  const data = store.buildExport()
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = `folio-export-${data.exportedAt.slice(0, 10)}.json`
-  link.click()
-  URL.revokeObjectURL(url)
-  showToast(`${plural(data.cards.length, 'vue')} exportée${data.cards.length > 1 ? 's' : ''}.`)
+async function exportCards(): Promise<void> {
+  if (busy.value) return
+  busy.value = true
+  try {
+    const data = await store.buildExport()
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `folio-export-${data.exportedAt.slice(0, 10)}.json`
+    link.click()
+    URL.revokeObjectURL(url)
+    showToast(`${plural(data.cards.length, 'vue')} exportée${data.cards.length > 1 ? 's' : ''}.`)
+  } catch {
+    showToast('Export impossible.', 'error')
+  } finally {
+    busy.value = false
+  }
 }
 
 function triggerImport(): void {
-  if (!fileInput.value) return
+  if (!fileInput.value || busy.value) return
   fileInput.value.value = ''
   fileInput.value.click()
 }
@@ -97,8 +106,9 @@ function triggerImport(): void {
 async function handleImport(event: Event): Promise<void> {
   const file = (event.target as HTMLInputElement).files?.[0]
   if (!file) return
+  busy.value = true
   try {
-    const count = store.importCards(await file.text())
+    const count = await store.importCards(await file.text())
     if (count === 0) {
       showToast('Aucune vue valide dans ce fichier.', 'error')
       return
@@ -106,6 +116,8 @@ async function handleImport(event: Event): Promise<void> {
     showToast(`${plural(count, 'vue')} importée${count > 1 ? 's' : ''}.`)
   } catch (error) {
     showToast(error instanceof Error ? error.message : 'Import impossible.', 'error')
+  } finally {
+    busy.value = false
   }
 }
 
@@ -277,6 +289,11 @@ onBeforeUnmount(() => clearTimeout(toastTimer))
   &.router-link-active {
     color: $text-primary;
     border-color: $accent;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: wait;
   }
 }
 

@@ -1,9 +1,10 @@
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
-import type { Card, CardUpdate, FolioExport, NewCard } from '../types'
+import type { Card, CardUpdate, ExportedCard, FolioExport, NewCard } from '../types'
+import { dataUrlToBlob, deleteImage, getImageDataUrl, isImageDataUrl, saveImage } from '../lib/imageStore'
 
 const STORAGE_KEY = 'folio-cards'
-const EXPORT_VERSION = '2.0'
+const EXPORT_VERSION = '3.0'
 const DAY = 86_400_000
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -37,6 +38,7 @@ export function sanitizeCard(raw: unknown): Card | null {
     id: typeof raw.id === 'string' && raw.id ? raw.id : crypto.randomUUID(),
     title,
     imageUrl: cleanUrl(raw.imageUrl),
+    imageId: typeof raw.imageId === 'string' ? raw.imageId : '',
     description: typeof raw.description === 'string' ? raw.description.trim() : '',
     tags: normalizeTags(raw.tags),
     selected: raw.selected === true,
@@ -44,7 +46,12 @@ export function sanitizeCard(raw: unknown): Card | null {
   }
 }
 
-export function parseImport(text: string): Card[] {
+export interface ParsedCard {
+  card: Card
+  imageData: string | null
+}
+
+export function parseImport(text: string): ParsedCard[] {
   let data: unknown
   try {
     data = JSON.parse(text)
@@ -53,10 +60,12 @@ export function parseImport(text: string): Card[] {
   }
   const list = Array.isArray(data) ? data : isRecord(data) ? data.cards : null
   if (!Array.isArray(list)) throw new Error('Format non reconnu : aucune liste de cartes trouvée.')
-  return list
-    .map(item => sanitizeCard(item))
-    .filter((card): card is Card => card !== null)
-    .map(card => ({ ...card, id: crypto.randomUUID() }))
+  return list.flatMap(item => {
+    const card = sanitizeCard(item)
+    if (!card) return []
+    const imageData = isRecord(item) && isImageDataUrl(item.imageData) ? item.imageData : null
+    return [{ card: { ...card, id: crypto.randomUUID(), imageId: '' }, imageData }]
+  })
 }
 
 export function filterCards(cards: Card[], tag: string | null, query: string, selectionOnly = false): Card[] {
@@ -92,6 +101,7 @@ function defaultCards(): Card[] {
     id: crypto.randomUUID(),
     title,
     imageUrl,
+    imageId: '',
     description,
     tags,
     selected,
@@ -139,7 +149,8 @@ export const useCardsStore = defineStore('cards', () => {
     const card: Card = {
       id: crypto.randomUUID(),
       title: input.title.trim(),
-      imageUrl: cleanUrl(input.imageUrl),
+      imageUrl: input.imageId ? '' : cleanUrl(input.imageUrl),
+      imageId: input.imageId,
       description: input.description.trim(),
       tags: normalizeTags(input.tags),
       selected: false,
@@ -153,10 +164,13 @@ export const useCardsStore = defineStore('cards', () => {
     const index = cards.value.findIndex(card => card.id === id)
     if (index === -1) return
     const current = cards.value[index]
+    const imageId = updates.imageId ?? current.imageId
+    if (current.imageId && imageId !== current.imageId) void deleteImage(current.imageId)
     cards.value[index] = {
       ...current,
       title: updates.title?.trim() || current.title,
-      imageUrl: updates.imageUrl !== undefined ? cleanUrl(updates.imageUrl) : current.imageUrl,
+      imageId,
+      imageUrl: imageId ? '' : updates.imageUrl !== undefined ? cleanUrl(updates.imageUrl) : current.imageUrl,
       description: updates.description !== undefined ? updates.description.trim() : current.description,
       tags: updates.tags !== undefined ? normalizeTags(updates.tags) : current.tags,
       selected: updates.selected ?? current.selected
@@ -172,6 +186,7 @@ export const useCardsStore = defineStore('cards', () => {
     const index = cards.value.findIndex(card => card.id === id)
     if (index === -1) return null
     const [removed] = cards.value.splice(index, 1)
+    if (removed?.imageId) void deleteImage(removed.imageId)
     return removed ?? null
   }
 
@@ -183,17 +198,37 @@ export const useCardsStore = defineStore('cards', () => {
     selectionOnly.value = !selectionOnly.value
   }
 
-  function buildExport(): FolioExport {
+  async function buildExport(): Promise<FolioExport> {
+    const exported = await Promise.all(
+      cards.value.map(async (card): Promise<ExportedCard> => {
+        if (!card.imageId) return { ...card }
+        const imageData = await getImageDataUrl(card.imageId)
+        return imageData ? { ...card, imageData } : { ...card, imageId: '' }
+      })
+    )
     return {
       version: EXPORT_VERSION,
       exportedAt: new Date().toISOString(),
       source: 'Folio',
-      cards: cards.value
+      cards: exported
     }
   }
 
-  function importCards(text: string): number {
-    const incoming = parseImport(text)
+  async function importCards(text: string): Promise<number> {
+    const parsed = parseImport(text)
+    const incoming: Card[] = []
+    for (const { card, imageData } of parsed) {
+      if (!imageData) {
+        incoming.push(card)
+        continue
+      }
+      try {
+        const imageId = await saveImage(await dataUrlToBlob(imageData))
+        incoming.push({ ...card, imageId, imageUrl: '' })
+      } catch {
+        incoming.push(card)
+      }
+    }
     cards.value = [...incoming, ...cards.value]
     return incoming.length
   }

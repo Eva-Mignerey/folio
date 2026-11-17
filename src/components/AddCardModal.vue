@@ -1,5 +1,14 @@
 <template>
-  <dialog ref="dialogRef" class="modal" :aria-labelledby="ids.title" @close="emit('close')" @click="closeOnBackdrop">
+  <dialog
+    ref="dialogRef"
+    class="modal"
+    :aria-labelledby="ids.title"
+    @close="emit('close')"
+    @click="closeOnBackdrop"
+    @paste="onPaste"
+    @dragover.prevent
+    @drop.prevent="onDrop"
+  >
     <form class="modal__inner" @submit.prevent="submit">
       <div class="modal__header">
         <div class="modal__heading">
@@ -14,14 +23,42 @@
           <label :for="ids.titleInput" class="modal__label">Titre *</label>
           <input :id="ids.titleInput" v-model="form.title" class="modal__input" placeholder="Ex : Références typographiques" required autofocus />
         </div>
+
         <div class="modal__field">
-          <label :for="ids.url" class="modal__label">URL de l’image</label>
-          <input :id="ids.url" v-model="form.imageUrl" type="url" class="modal__input" placeholder="https://..." />
-          <div v-if="showPreview" class="modal__preview">
-            <img :src="form.imageUrl" alt="Aperçu de l’image" @error="previewError = true" />
+          <span class="modal__label">Image</span>
+          <div
+            v-if="!filePreview"
+            class="modal__drop"
+            :class="{ 'modal__drop--over': dragging }"
+            @dragenter.prevent="dragging = true"
+            @dragover.prevent="dragging = true"
+            @dragleave.prevent="onDragLeave"
+            @drop.prevent.stop="onDrop"
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>
+            <p class="modal__drop-text">
+              Glisse une image ici, colle-la avec Ctrl+V ou
+              <label :for="ids.file" class="modal__drop-link">choisis un fichier</label>
+            </p>
+            <p class="modal__drop-hint">JPEG, PNG, WebP, GIF ou AVIF · 20 Mo max</p>
+            <input :id="ids.file" type="file" :accept="ACCEPTED_TYPES.join(',')" class="modal__file" @change="onFileChange" />
           </div>
-          <p v-if="previewError" class="modal__error" role="alert">Impossible de charger cette image.</p>
+          <div v-else class="modal__preview">
+            <img :src="filePreview" alt="Aperçu de l’image importée" />
+            <button type="button" class="modal__preview-remove" @click="clearFile">Retirer</button>
+          </div>
+          <p v-if="fileError" class="modal__error" role="alert">{{ fileError }}</p>
         </div>
+
+        <div v-if="!file" class="modal__field">
+          <label :for="ids.url" class="modal__label">Ou l’URL d’une image en ligne</label>
+          <input :id="ids.url" v-model="form.imageUrl" type="url" class="modal__input" placeholder="https://..." />
+          <div v-if="showUrlPreview" class="modal__preview">
+            <img :src="form.imageUrl" alt="Aperçu de l’image" @error="urlError = true" />
+          </div>
+          <p v-if="urlError" class="modal__error" role="alert">Impossible de charger cette image.</p>
+        </div>
+
         <div class="modal__field">
           <label :for="ids.description" class="modal__label">Description</label>
           <textarea :id="ids.description" v-model="form.description" class="modal__input modal__input--area" placeholder="Quelques mots..." rows="3" />
@@ -34,7 +71,9 @@
 
       <div class="modal__footer">
         <button type="button" class="modal__btn modal__btn--cancel" @click="close">Annuler</button>
-        <button type="submit" class="modal__btn modal__btn--submit" :disabled="!form.title.trim()">Ajouter</button>
+        <button type="submit" class="modal__btn modal__btn--submit" :disabled="!form.title.trim() || saving">
+          {{ saving ? 'Développement…' : 'Ajouter' }}
+        </button>
       </div>
     </form>
   </dialog>
@@ -43,31 +82,81 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref, useId, watch } from 'vue'
 import { parseTagInput, useCardsStore } from '../stores/cards'
+import { ACCEPTED_TYPES, checkImageFile, saveImage } from '../lib/imageStore'
 
 const emit = defineEmits<{ close: [] }>()
 
 const store = useCardsStore()
 const dialogRef = ref<HTMLDialogElement | null>(null)
-const previewError = ref(false)
 const form = reactive({ title: '', imageUrl: '', description: '', tagsRaw: '' })
+const file = ref<File | null>(null)
+const filePreview = ref('')
+const fileError = ref('')
+const urlError = ref(false)
+const dragging = ref(false)
+const saving = ref(false)
 
 const baseId = useId()
 const ids = {
   title: `${baseId}-title`,
   titleInput: `${baseId}-title-input`,
+  file: `${baseId}-file`,
   url: `${baseId}-url`,
   description: `${baseId}-description`,
   tags: `${baseId}-tags`
 }
 
-const showPreview = computed(() => /^https?:\/\/.+/i.test(form.imageUrl.trim()) && !previewError.value)
+const showUrlPreview = computed(() => /^https?:\/\/.+/i.test(form.imageUrl.trim()) && !urlError.value)
 
 watch(
   () => form.imageUrl,
   () => {
-    previewError.value = false
+    urlError.value = false
   }
 )
+
+function setFile(candidate: File): void {
+  const problem = checkImageFile(candidate)
+  if (problem) {
+    fileError.value = problem
+    return
+  }
+  clearFile()
+  file.value = candidate
+  filePreview.value = URL.createObjectURL(candidate)
+  if (!form.title.trim()) form.title = candidate.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').trim()
+}
+
+function clearFile(): void {
+  if (filePreview.value) URL.revokeObjectURL(filePreview.value)
+  file.value = null
+  filePreview.value = ''
+  fileError.value = ''
+}
+
+function onFileChange(event: Event): void {
+  const picked = (event.target as HTMLInputElement).files?.[0]
+  if (picked) setFile(picked)
+}
+
+function onDragLeave(event: DragEvent): void {
+  const zone = event.currentTarget as HTMLElement
+  if (!zone.contains(event.relatedTarget as Node | null)) dragging.value = false
+}
+
+function onDrop(event: DragEvent): void {
+  dragging.value = false
+  const dropped = event.dataTransfer?.files[0]
+  if (dropped) setFile(dropped)
+}
+
+function onPaste(event: ClipboardEvent): void {
+  const item = [...(event.clipboardData?.items ?? [])].find(entry => entry.kind === 'file' && entry.type.startsWith('image/'))
+  const pasted = item?.getAsFile()
+  if (!pasted) return
+  event.preventDefault()
+  setFile(pasted)
+}
 
 onMounted(() => {
   dialogRef.value?.showModal()
@@ -76,6 +165,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   document.body.style.overflow = ''
+  if (filePreview.value) URL.revokeObjectURL(filePreview.value)
 })
 
 function close(): void {
@@ -86,15 +176,24 @@ function closeOnBackdrop(event: MouseEvent): void {
   if (event.target === dialogRef.value) close()
 }
 
-function submit(): void {
-  if (!form.title.trim()) return
-  store.addCard({
-    title: form.title,
-    imageUrl: form.imageUrl,
-    description: form.description,
-    tags: parseTagInput(form.tagsRaw)
-  })
-  close()
+async function submit(): Promise<void> {
+  if (!form.title.trim() || saving.value) return
+  saving.value = true
+  try {
+    const imageId = file.value ? await saveImage(file.value) : ''
+    store.addCard({
+      title: form.title,
+      imageUrl: imageId ? '' : form.imageUrl,
+      imageId,
+      description: form.description,
+      tags: parseTagInput(form.tagsRaw)
+    })
+    close()
+  } catch (error) {
+    fileError.value = error instanceof Error ? error.message : 'Impossible d’ajouter l’image.'
+  } finally {
+    saving.value = false
+  }
 }
 </script>
 
@@ -225,7 +324,61 @@ function submit(): void {
   }
 }
 
+.modal__drop {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 26px 16px;
+  border: 1px dashed $border-hover;
+  border-radius: $radius;
+  background: $bg;
+  color: $text-muted;
+  text-align: center;
+  transition: border-color $duration $ease, background $duration $ease, color $duration $ease;
+
+  &:focus-within {
+    border-color: $accent;
+  }
+
+  &--over {
+    border-color: $accent;
+    background: rgba(210, 52, 88, 0.08);
+    color: $text-primary;
+  }
+}
+
+.modal__drop-text {
+  font-size: 13px;
+  line-height: 1.5;
+  color: $text-secondary;
+}
+
+.modal__drop-link {
+  color: $accent;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.modal__drop-hint {
+  font-family: $font-mono;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: $text-muted;
+}
+
+.modal__file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .modal__preview {
+  position: relative;
   margin-top: 4px;
   padding: 10px 6px;
   border-radius: $radius;
@@ -235,6 +388,24 @@ function submit(): void {
     width: 100%;
     aspect-ratio: 3 / 2;
     object-fit: cover;
+  }
+}
+
+.modal__preview-remove {
+  position: absolute;
+  top: 18px;
+  right: 14px;
+  font-family: $font-mono;
+  font-size: 11px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(12, 11, 11, 0.8);
+  color: $text-primary;
+  transition: color $duration $ease;
+
+  &:hover,
+  &:focus-visible {
+    color: $danger;
   }
 }
 
