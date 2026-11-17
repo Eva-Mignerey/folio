@@ -1,15 +1,17 @@
-$bg: #dff1ee;
-$surface: #aae0e7;
-$surface-2: #37718E;
-$border: rgba(37, 78, 112, 0.4);
-$border-hover: rgba(37, 78, 112, 0.65);
-$accent: #C33C54;
-$text-primary: #12314a;
-$text-secondary: #1f4b61;
-$text-muted: #29556b;
+$bg: #0e0e0e;
+$surface: #161616;
+$surface-2: #1f1f1f;
+$border: rgba(255, 255, 255, 0.08);
+$border-hover: rgba(255, 255, 255, 0.22);
+$accent: #d23458;
+$danger: #ff6b6b;
+$text-primary: #ededed;
+$text-secondary: #b5b5b5;
+$text-muted: #8a8a8a;
 
 $font-body: 'Inter', sans-serif;
 $font-mono: 'Fragment Mono', monospace;
 
+$radius: 10px;
 $duration: 180ms;
 $ease: cubic-bezier(0.22, 1, 0.36, 1);
