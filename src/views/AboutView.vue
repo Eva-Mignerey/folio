@@ -14,7 +14,7 @@
         <h2 id="about-why" class="about__section-title"><span>01</span>Pourquoi</h2>
         <p class="about__text">
           J’ai regardé ce qui existait avant de commencer. Aucun outil ne correspondait à ce que je cherchais : quelque
-          chose de simple, rapide, sans compte et sans algorithme.
+          chose de simple, rapide et complètement privé, sans compte, sans serveur et sans algorithme.
         </p>
         <ul class="about__compare">
           <li v-for="tool in tools" :key="tool.name" class="about__compare-item">
@@ -74,12 +74,13 @@ const specs: Spec[] = [
   { label: 'Format', value: 'Vues 3:2 numérotées dans l’ordre de développement' },
   { label: 'Sélection', value: 'Entourer une vue au crayon gras, filtrer sur la sélection' },
   { label: 'Tri', value: 'Tags personnalisés et recherche instantanée' },
-  { label: 'Stockage', value: 'Dans le navigateur, sans compte ni serveur' },
-  { label: 'Archivage', value: 'Export et import JSON pour sauvegarder ou transférer' },
+  { label: 'Développement', value: 'Glisser-déposer, coller ou choisir une image depuis son ordinateur' },
+  { label: 'Stockage', value: '100 % local : images dans IndexedDB, compressées en WebP, aucun serveur' },
+  { label: 'Archivage', value: 'Export et import JSON, images comprises, pour sauvegarder ou transférer' },
   { label: 'Accès', value: 'Navigation clavier, lecteurs d’écran, animations réduites' }
 ]
 
-const stack: string[] = ['Vue.js 3', 'TypeScript', 'Pinia', 'Vue Router', 'Vite', 'SCSS', 'localStorage']
+const stack: string[] = ['Vue.js 3', 'TypeScript', 'Pinia', 'Vue Router', 'Vite', 'SCSS', 'IndexedDB', 'localStorage']
 </script>
 
 <style lang="scss" scoped>
